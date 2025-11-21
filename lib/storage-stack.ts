@@ -13,6 +13,7 @@ export class StorageStack extends cdk.Stack {
     public readonly dynamoDbTable : dynamodb.Table
     public readonly messageQueueForSizeTracking : sqs.Queue
     public readonly messageQueueForLogging : sqs.Queue
+    public readonly indexName: 'ALllBucketsIndex'
 
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props)
@@ -52,7 +53,7 @@ export class StorageStack extends cdk.Stack {
                 name: 'total_size', 
                 type: dynamodb.AttributeType.NUMBER
             },
-            
+
             projectionType: dynamodb.ProjectionType.ALL
         })
 
