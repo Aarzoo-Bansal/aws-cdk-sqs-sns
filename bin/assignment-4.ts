@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib/core';
 import { Assignment4Stack } from '../lib/assignment-4-stack';
+import { StorageStack } from '../lib/storage-stack';
+import { SizeTrackingStack } from '../lib/size-tracking-stack';
+import { table } from 'console';
+
 
 const app = new cdk.App();
-new Assignment4Stack(app, 'Assignment4Stack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+const storageStack = new StorageStack(app, 'Assignment4StorageStack', {
+  description: 'S3, SNS, SQS, and DynamoDB for Assignment 4'
+})
 
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
+const sizeTrackingStack = new SizeTrackingStack(app, 'Assignment4SizeTrackingStack', {
+  queue: storageStack.messageQueueForSizeTracking,
+  table: storageStack.dynamoDbTable,
+  bucket: storageStack.s3Bucket
+})
 
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
-});
+
+
