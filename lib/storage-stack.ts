@@ -28,11 +28,32 @@ export class StorageStack extends cdk.Stack {
         // Creating a dynamo db table
         this.dynamoDbTable = new dynamodb.Table(this, 'Assignment4SizeTrackingTable', {
             partitionKey : {
-                name : 'object_name',
+                name : 'bucket_name',
                 type: dynamodb.AttributeType.STRING
             },
 
+            sortKey: {
+                name: 'timestamp',
+                type: dynamodb.AttributeType.NUMBER
+            },
+
             removalPolicy: cdk.RemovalPolicy.DESTROY
+        })
+
+        this.dynamoDbTable.addGlobalSecondaryIndex({
+            indexName: 'AllBucketsIndex',
+
+            partitionKey: {
+                name: 'record_type', 
+                type: dynamodb.AttributeType.STRING
+            },
+
+            sortKey: {
+                name: 'total_size', 
+                type: dynamodb.AttributeType.NUMBER
+            },
+            
+            projectionType: dynamodb.ProjectionType.ALL
         })
 
         /***********************************************************************************************************************************/
