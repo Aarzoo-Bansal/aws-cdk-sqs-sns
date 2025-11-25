@@ -7,7 +7,7 @@ import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { Construct } from 'constructs';
 
 interface MonitoringCleanerStackProps extends cdk.StackProps {
-  logGroupName: string;
+  logGroup: logs.LogGroup;
   bucket: s3.Bucket;
 }
 
@@ -37,16 +37,16 @@ export class MonitoringCleanerStack extends cdk.Stack {
 
     /***********************************************************************************************************************************/
     // Reference the existing log group
-    const logGroup = logs.LogGroup.fromLogGroupName(
-      this,
-      'LoggingLambdaLogGroup',
-      props.logGroupName
-    );
+    // const logGroup = logs.LogGroup.fromLogGroupName(
+    //   this,
+    //   'LoggingLambdaLogGroup',
+    //   props.logGroup
+    // );
 
     /***********************************************************************************************************************************/
     // Create metric filter
     const metricFilter = new logs.MetricFilter(this, 'SizeDeltaMetricFilter', {
-      logGroup: logGroup,
+      logGroup: props.logGroup,
       metricNamespace: 'Assignment4App',
       metricName: 'TotalObjectSize',
       filterPattern: logs.FilterPattern.exists('$.size_delta'),

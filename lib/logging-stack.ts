@@ -1,50 +1,50 @@
-import * as cdk from 'aws-cdk-lib'
-import * as lambda from 'aws-cdk-lib/aws-lambda'
-import * as sqs from 'aws-cdk-lib/aws-sqs'
-import * as iam from 'aws-cdk-lib/aws-iam'
-import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
-import { Construct } from 'constructs'
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';  // ADD THIS
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import { Construct } from 'constructs';
 
 interface LoggingStackProps extends cdk.StackProps {
-    queue : sqs.Queue
+  queue: sqs.Queue;
 }
 
 export class LoggingStack extends cdk.Stack {
-    public readonly loggingLambda: lambda.Function
-    public readonly logGroupName: string
+  public readonly loggingLambda: lambda.Function;
+  public readonly logGroup: logs.LogGroup;  // CHANGE THIS from logGroupName
 
-    constructor(scope: Construct, id: string, props: LoggingStackProps) {
-        super(scope, id, props)
+  constructor(scope: Construct, id: string, props: LoggingStackProps) {
+    super(scope, id, props);
 
-        /***********************************************************************************************************************************/   
-        // Creating the lambda function
-        this.loggingLambda = new lambda.Function(this, 'Assignment4LoggingFunction', {
-            runtime: lambda.Runtime.PYTHON_3_11,
-            handler: 'index.handler',
-            code: lambda.Code.fromAsset('lambda/logging'),
-            timeout: cdk.Duration.seconds(60)
-        })
+    // Explicitly create log group FIRST
+    this.logGroup = new logs.LogGroup(this, 'LoggingLambdaLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,  // Adjust as needed
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
-        /***********************************************************************************************************************************/   
-        // The log group name
-        this.logGroupName = `aws/;ambda/${this.loggingLambda.functionName}`
+    // Create Lambda function
+    this.loggingLambda = new lambda.Function(this, 'LoggingFunction', {
+      runtime: lambda.Runtime.PYTHON_3_11,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/logging'),
+      timeout: cdk.Duration.seconds(60),
+      logGroup: this.logGroup,  // Use the log group we created
+    });
 
-        /***********************************************************************************************************************************/   
-        // Adding SQS event source
-        this.loggingLambda.addEventSource(new SqsEventSource(props.queue, {
-            batchSize: 10
-        }))
+    // Rest of the code stays the same...
+    this.loggingLambda.addEventSource(new SqsEventSource(props.queue, {
+      batchSize: 10,
+    }));
 
-        /***********************************************************************************************************************************/   
-        // Granting permisions
-        props.queue.grantConsumeMessages(this.loggingLambda)
-
-        this.loggingLambda.addToRolePolicy(new iam.PolicyStatement({
-            actions: [
-                'logs:FilterLogEvents',
-                'logs:DescribingLogStreams'
-            ],
-            resources: ['*']
-        }))
-    }
+    props.queue.grantConsumeMessages(this.loggingLambda);
+    
+    this.loggingLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: [
+        'logs:FilterLogEvents',
+        'logs:DescribeLogStreams'
+      ],
+      resources: ['*'],
+    }));
+  }
 }

@@ -27,7 +27,7 @@ const loggingStack = new LoggingStack(app, 'Assignment4LoggingStack', {
 
 const monitoringCleanerStack = new MonitoringCleanerStack(app, 'Assignment4MonitoringCleanerStack', {
   description: 'CloudWatch monitoring and cleaner Lambda',
-  logGroupName: loggingStack.logGroupName,
+  logGroup: loggingStack.logGroup,
   bucket: storageStack.s3Bucket
 });
 

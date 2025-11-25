@@ -9,57 +9,68 @@ table = dynamodb.Table(os.environ['TABLE_NAME'])
 
 def handler(event, context):
     """
-    Processes SQS messages containing S3 events
-    For each event, computes total bucket size and stores in DynamoDB
+    Processes SQS messages containing S3 events.
+    For each event, computes total bucket size and stores in DynamoDB.
     """
-
     for record in event['Records']:
         # Parse SQS message body
         body = json.loads(record['body'])
-
-        # SNS warps the S3 event in a Message Field
+        
+        # DEBUG: Print the body to see structure
+        print(f"DEBUG - SQS Body keys: {body.keys()}")
+        print(f"DEBUG - Full SQS Body: {json.dumps(body, indent=2)}")
+        
+        # SNS wraps the S3 event in a Message field
         message = json.loads(body['Message'])
-
+        
+        # DEBUG: Print the message to see structure
+        print(f"DEBUG - SNS Message keys: {message.keys()}")
+        print(f"DEBUG - Full SNS Message: {json.dumps(message, indent=2)}")
+        
+        # Check if 'Records' exists in message
+        if 'Records' not in message:
+            print(f"ERROR: 'Records' not found in message. Available keys: {list(message.keys())}")
+            continue
+        
         # Process S3 event
         for s3_record in message['Records']:
             event_name = s3_record['eventName']
-            key = s3_record['s3']['object']['key']
             bucket_name = s3_record['s3']['bucket']['name']
-
-            print(f'Processing S3 event: {event_name} for bucket: {bucket_name} , object {key}')
-
-            # Compute the total bucket size
+            key = s3_record['s3']['object']['key']
+            
+            print(f'Processing S3 event: {event_name} for bucket: {bucket_name}, object: {key}')
+            
+            # Compute total bucket size
             total_size, object_count = compute_bucket_size(bucket_name)
-
+            
             # Store aggregate data in DynamoDB
             timestamp = int(datetime.now().timestamp())
-
+            
             table.put_item(Item={
-                'bucket_name' : bucket_name,
-                'timestamp' : timestamp,
-                'total_size' : total_size,
-                'object_count' : object_count,
-                'record_type' : 'SIZE_RECORD'
+                'bucket_name': bucket_name,
+                'timestamp': timestamp,
+                'total_size': total_size,
+                'object_count': object_count,
+                'record_type': 'SIZE_RECORD'
             })
-
+            
             print(f'Stored: bucket={bucket_name}, size={total_size} bytes, count={object_count}, timestamp={timestamp}')
+    
+    return {'statusCode': 200}
 
-        return {'statusCode': 200}
-
-    def compute_bucket_size(bucket_name):
-        """
-        Calculate the total size and count of all objects in the bucket
-        """
-
-        total_size = 0
-        object_count = 0
-
-        paginator = s3.get_paginator('list_objects_v2')
-
-        for page in paginator.paginate(Bucket=bucket_name):
-            if 'Contents' in page:
-                for obj in page['Contents']:
-                    total_size += obj['Size']
-                    object_count += 1
-        
-        return total_size, object_count
+def compute_bucket_size(bucket_name):
+    """
+    Calculate total size and count of all objects in the bucket.
+    """
+    total_size = 0
+    object_count = 0
+    
+    paginator = s3.get_paginator('list_objects_v2')
+    
+    for page in paginator.paginate(Bucket=bucket_name):
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                total_size += obj['Size']
+                object_count += 1
+    
+    return total_size, object_count
